@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevsRAG — Intelligent Document Understanding Platform</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            300: '#fde047',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            900: '#78350f',
+                            950: '#451a03',
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'monospace'],
+                        sans: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-[#0a0a0a] text-gray-200 min-h-screen font-sans flex flex-col antialiased selection:bg-amber-500/30 selection:text-amber-200">
+    <!-- Top Navigation Header -->
+    <header class="bg-[#111113]/90 backdrop-blur-md border-b border-amber-500/20 px-6 py-4 flex justify-between items-center shadow-lg z-10">
+        <div class="flex items-center gap-3">
+            <div class="text-2xl text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.6)]">⚡</div>
+            <div>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-white via-amber-200 to-amber-500 bg-clip-text text-transparent">DevsRAG</h1>
+                <p class="text-xs text-gray-400">Powered by the AntiGrav Engine — Zero weight, maximum context.</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="open-arch-btn" class="border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 shadow-sm">
+                <span>ℹ️</span>
+                <span>Architecture</span>
+            </button>
+            <div class="flex items-center gap-2 text-xs text-gray-400 border-l border-amber-500/20 pl-3">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_#10b981]"></span>
+                <span>Engine Online</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- In-App Toast Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none"></div>
+
+    <!-- Main Dashboard Layout -->
+    <div class="flex flex-1 overflow-hidden h-[calc(100vh-65px)]">
+        <!-- Left Panel: Bento Document Ingestion Workspace -->
+        <aside class="w-1/3 min-w-[320px] max-w-[400px] border-r border-amber-500/20 p-6 bg-[#111113] flex flex-col gap-6 overflow-y-auto">
+            <div>
+                <h2 class="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-1">Document Collection</h2>
+                <p class="text-xs text-gray-400 mb-3">Upload PDF, DOCX, TXT, or MD files for RAG indexing.</p>
+
+                <!-- Bento Upload Dropzone -->
+                <div class="border border-amber-500/20 bg-[#121212] backdrop-blur-md rounded-2xl p-5 text-center hover:border-amber-400/60 hover:shadow-[0_0_20px_rgba(245,158,11,0.25)] transition-all cursor-pointer" id="dropzone">
+                    <div class="text-3xl mb-2 text-amber-400">📁</div>
+                    <p class="text-xs text-gray-200">Drag & drop files here, or <span class="text-amber-400 underline font-medium">browse</span></p>
+                    <p class="text-[10px] text-gray-500 mt-1">Supports PDF, DOCX, TXT, MD (Max 25MB)</p>
+                    <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt,.md" class="hidden">
+                </div>
+            </div>
+
+            <!-- Collection Controls & Document List -->
+            <div class="flex-1 flex flex-col min-h-0">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs font-semibold text-gray-300 uppercase tracking-wider">Workspace Documents</h3>
+                    <span class="text-xs px-2.5 py-0.5 bg-amber-500/10 border border-amber-500/30 rounded-full text-amber-300 font-medium" id="doc-count">0 docs</span>
+                </div>
+
+                <!-- Filter Tabs -->
+                <div class="flex gap-1.5 mb-3 bg-[#161618] p-1 rounded-xl border border-amber-500/20">
+                    <button class="filter-tab active flex-1 py-1 text-xs rounded-lg font-medium text-gray-400 hover:text-white transition-all" data-filter="all">All</button>
+                    <button class="filter-tab flex-1 py-1 text-xs rounded-lg font-medium text-gray-400 hover:text-white transition-all" data-filter="ready">Ready</button>
+                    <button class="filter-tab flex-1 py-1 text-xs rounded-lg font-medium text-gray-400 hover:text-white transition-all" data-filter="pending">Processing</button>
+                </div>
+
+                <!-- Document Cards Container -->
+                <div class="document-list flex-1 overflow-y-auto space-y-2.5 pr-1" id="document-list">
+                    <div class="text-center py-6 text-xs text-gray-500">
+                        Loading workspace documents...
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Panel: Grounded Search & Chat -->
+        <section class="w-2/3 flex-1 flex flex-col p-6 bg-[#0a0a0a] h-full overflow-hidden">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-amber-500/20">
+                <span class="text-xs text-amber-300 font-medium px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-full" id="active-scope-pill">
+                    Scope: Entire Document Collection
+                </span>
+                <div class="flex items-center gap-2">
+                    <button id="export-chat-btn" class="border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 shadow-sm">
+                        <span>📥</span>
+                        <span>Export Chat</span>
+                    </button>
+                    <button id="clear-chat-btn" class="border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 hover:border-amber-400 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 shadow-sm">
+                        <span>🗑️</span>
+                        <span>Clear Chat</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Interactive Chat Stream -->
+            <div class="chat-container flex-1 overflow-y-auto space-y-4 pr-2 mb-4" id="chat-container">
+                <div class="chat-welcome max-w-md mx-auto my-auto text-center p-6 bg-[#121212] border border-amber-500/20 backdrop-blur-md rounded-2xl shadow-xl">
+                    <div class="text-4xl mb-3">🔍</div>
+                    <h2 class="text-lg font-bold text-amber-300 mb-2">DevsRAG Research Assistant</h2>
+                    <p class="text-xs text-gray-400 mb-4">Ask natural-language questions, compare files side-by-side, or query metadata about your uploaded documents.</p>
+                    
+                    <div class="suggested-queries space-y-2 text-left">
+                        <button class="w-full text-xs p-2.5 bg-[#18181b] border border-amber-500/20 rounded-xl text-gray-300 hover:border-amber-400 hover:bg-amber-500/10 transition-all hover:shadow-[0_0_12px_rgba(245,158,11,0.2)]" onclick="document.getElementById('query-input').value='Provide a summary of the uploaded document'; document.getElementById('query-form').dispatchEvent(new Event('submit'));">
+                            💡 Summarize active document
+                        </button>
+                        <button class="w-full text-xs p-2.5 bg-[#18181b] border border-amber-500/20 rounded-xl text-gray-300 hover:border-amber-400 hover:bg-amber-500/10 transition-all hover:shadow-[0_0_12px_rgba(245,158,11,0.2)]" onclick="document.getElementById('query-input').value='At what time was the pdf uploaded and how many pages does it have?'; document.getElementById('query-form').dispatchEvent(new Event('submit'));">
+                            ⏱ Check upload timestamp & pages
+                        </button>
+                        <button class="w-full text-xs p-2.5 bg-[#18181b] border border-amber-500/20 rounded-xl text-gray-300 hover:border-amber-400 hover:bg-amber-500/10 transition-all hover:shadow-[0_0_12px_rgba(245,158,11,0.2)]" onclick="document.getElementById('query-input').value='Compare the uploaded files and list key differences'; document.getElementById('query-form').dispatchEvent(new Event('submit'));">
+                            ⚖️ Compare documents side-by-side
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Prompt Pills & Query Bar -->
+            <div class="pt-2 flex flex-col gap-2">
+                <!-- Quick Action Prompt Pills -->
+                <div class="flex gap-2 overflow-x-auto pb-1">
+                    <button class="prompt-pill text-xs px-3 py-1.5 bg-[#161618] hover:bg-amber-500/20 text-gray-300 hover:text-amber-300 border border-amber-500/30 rounded-full transition-all whitespace-nowrap" onclick="document.getElementById('query-input').value='✨ Provide a clear 3-bullet summary of the document';">
+                        ✨ Summarize Document
+                    </button>
+                    <button class="prompt-pill text-xs px-3 py-1.5 bg-[#161618] hover:bg-amber-500/20 text-gray-300 hover:text-amber-300 border border-amber-500/30 rounded-full transition-all whitespace-nowrap" onclick="document.getElementById('query-input').value='⚖️ Compare the uploaded files and list key differences in a table';">
+                        ⚖️ Compare Files
+                    </button>
+                    <button class="prompt-pill text-xs px-3 py-1.5 bg-[#161618] hover:bg-amber-500/20 text-gray-300 hover:text-amber-300 border border-amber-500/30 rounded-full transition-all whitespace-nowrap" onclick="document.getElementById('query-input').value='⏱️ At what time was the pdf uploaded and how many pages does it have?';">
+                        ⏱️ Check Metadata
+                    </button>
+                    <button class="prompt-pill text-xs px-3 py-1.5 bg-[#161618] hover:bg-amber-500/20 text-gray-300 hover:text-amber-300 border border-amber-500/30 rounded-full transition-all whitespace-nowrap" onclick="document.getElementById('query-input').value='📊 How many total pages, files, and chunks are in the workspace?';">
+                        📊 Workspace Stats
+                    </button>
+                </div>
+
+                <form id="query-form" class="flex gap-3 items-end">
+                    <textarea id="query-input" placeholder="Ask DevsRAG anything about your documents, compare files, or request metadata..." rows="2" class="flex-1 bg-[#121215] border border-amber-500/30 rounded-2xl p-3.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 shadow-inner resize-none" required></textarea>
+                    <button type="submit" id="submit-btn" class="px-5 py-3.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-semibold text-xs rounded-2xl shadow-lg hover:shadow-[0_0_15px_rgba(245,158,11,0.35)] transition-all flex items-center gap-1.5 h-full">
+                        <span>Query</span>
+                        <span>➔</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <!-- Floating Slide-Over Citation Preview Drawer -->
+    <div id="preview-drawer" class="fixed top-0 right-0 h-full w-[400px] bg-[#121215] border-l border-amber-500/40 shadow-2xl z-50 p-6 transition-transform duration-300 translate-x-full flex flex-col">
+        <div class="flex justify-between items-center pb-4 mb-4 border-b border-amber-500/20">
+            <div>
+                <h3 id="drawer-doc-name" class="font-bold text-sm text-amber-300 truncate max-w-[280px]">Document Title</h3>
+                <span id="drawer-page-num" class="text-[10px] px-2 py-0.5 bg-amber-500/20 border border-amber-500/40 rounded text-amber-200">Page 1</span>
+            </div>
+            <button id="close-drawer-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+        </div>
+        
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <div class="text-[10px] font-bold text-amber-500 tracking-wider uppercase mb-2">Retrieved Text Chunk Context</div>
+            <div id="drawer-chunk-content" class="flex-1 bg-[#0a0a0c] border border-amber-500/30 rounded-xl p-4 font-mono text-xs text-amber-200/90 whitespace-pre-wrap overflow-y-auto leading-relaxed shadow-inner">
+                Select a citation to inspect source chunk content...
+            </div>
+            
+            <div class="flex justify-between items-center mt-4 pt-3 border-t border-amber-500/20">
+                <button id="prev-chunk-btn" class="px-3 py-1.5 bg-[#1a1a1d] border border-amber-500/30 rounded-xl text-xs text-gray-300 hover:border-amber-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed">← Previous</button>
+                <span id="chunk-counter" class="text-xs text-gray-500 font-mono">1 of 1</span>
+                <button id="next-chunk-btn" class="px-3 py-1.5 bg-[#1a1a1d] border border-amber-500/30 rounded-xl text-xs text-gray-300 hover:border-amber-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed">Next →</button>
+            </div>
+        </div>
+    </div>
+    <div id="drawer-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden"></div>
+
+    <!-- System Architecture Modal Overlay -->
+    <div id="arch-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md hidden">
+        <div class="bg-[#121215] border border-amber-500/40 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative flex flex-col gap-5">
+            <div class="flex justify-between items-center pb-3 border-b border-amber-500/20">
+                <div class="flex items-center gap-2">
+                    <span class="text-amber-400 text-xl">⚡</span>
+                    <h2 class="font-bold text-base text-amber-300">DevsRAG Engine Architecture</h2>
+                </div>
+                <button id="close-arch-btn" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+
+            <p class="text-xs text-gray-300 leading-relaxed">
+                DevsRAG utilizes a zero-latency hybrid vector retrieval pipeline backed by ChromaDB and Google Gemini for grounded natural-language document understanding.
+            </p>
+
+            <!-- Visual Flowchart -->
+            <div class="bg-[#0a0a0c] border border-amber-500/30 rounded-xl p-5 space-y-4 font-mono text-xs">
+                <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wider mb-2">END-TO-END PIPELINE FLOW</div>
+                
+                <div class="grid grid-cols-5 gap-2 text-center items-center">
+                    <div class="p-2.5 bg-[#161618] border border-amber-500/30 rounded-lg text-amber-200 hover:border-amber-400 transition-all">
+                        <div class="text-lg mb-1">📄</div>
+                        <div class="font-bold text-[10px]">1. Ingestion</div>
+                        <div class="text-[9px] text-gray-400 mt-0.5">PDF/DOCX Chunking</div>
+                    </div>
+                    <div class="text-amber-500 font-bold text-sm">➔</div>
+                    <div class="p-2.5 bg-[#161618] border border-amber-500/30 rounded-lg text-amber-200 hover:border-amber-400 transition-all">
+                        <div class="text-lg mb-1">🗄️</div>
+                        <div class="font-bold text-[10px]">2. ChromaDB</div>
+                        <div class="text-[9px] text-gray-400 mt-0.5">384-Dim Vectors</div>
+                    </div>
+                    <div class="text-amber-500 font-bold text-sm">➔</div>
+                    <div class="p-2.5 bg-[#161618] border border-amber-500/30 rounded-lg text-amber-200 hover:border-amber-400 transition-all">
+                        <div class="text-lg mb-1">🔎</div>
+                        <div class="font-bold text-[10px]">3. Hybrid RAG</div>
+                        <div class="text-[9px] text-gray-400 mt-0.5">Top-K Retrieval</div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center items-center gap-3 text-amber-500 font-bold text-sm my-1">
+                    <span>⬇</span>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="col-span-2 p-2.5 bg-[#161618] border border-amber-500/30 rounded-lg text-amber-200 hover:border-amber-400 transition-all flex items-center justify-center gap-3">
+                        <span class="text-xl">🤖</span>
+                        <div class="text-left">
+                            <div class="font-bold text-[10px] text-amber-300">4. Gemini Grounded Synthesis</div>
+                            <div class="text-[9px] text-gray-400">Contextual Re-writing + Dual Query Routing + Diff Engine</div>
+                        </div>
+                    </div>
+                    <div class="p-2.5 bg-[#161618] border border-amber-500/30 rounded-lg text-amber-200 hover:border-amber-400 transition-all">
+                        <div class="text-lg mb-1">📌</div>
+                        <div class="font-bold text-[10px]">5. Citations</div>
+                        <div class="text-[9px] text-gray-400 mt-0.5">Interactive Preview</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button id="dismiss-arch-btn" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-xl shadow-md transition-all">
+                    Got it
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
