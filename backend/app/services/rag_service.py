@@ -2,6 +2,7 @@ import time
 import logging
 import re
 from typing import Optional, List, Tuple
+from datetime import datetime, timezone, timedelta
 from sqlmodel import Session, select
 from app.config import settings
 from app.models import Document
@@ -10,6 +11,8 @@ from app.services.vector_service import VectorService
 from app.schemas import Citation, QueryResponse, ChatMessage
 
 logger = logging.getLogger(__name__)
+# Indian Standard Time (IST: UTC+5:30)
+IST = timezone(timedelta(hours=5, minutes=30))
 
 EMPTY_CONTEXT_RESPONSE = "The uploaded document collection does not contain information to answer this query."
 
@@ -178,8 +181,18 @@ class RAGService:
         ]
         return any(kw in q for kw in meta_keywords)
 
+    def _format_ist_datetime(self, dt) -> str:
+        """Format datetime in Indian Standard Time (IST: UTC+5:30)."""
+        if dt.tzinfo is None:
+            dt_ist = dt.replace(tzinfo=IST)
+        else:
+            dt_ist = dt.astimezone(IST)
+        day_str = dt_ist.strftime("%d %b")
+        time_str = dt_ist.strftime("%I:%M %p").lower()
+        return f"{day_str}, {time_str}"
+
     def _build_metadata_context(self, session: Optional[Session], scope_doc_id: Optional[str] = None) -> Tuple[str, int]:
-        """Inject actual document metadata array from database into context using DD MMM, hh:mm am/pm format."""
+        """Inject actual document metadata array from database into context using IST DD MMM, hh:mm am/pm format."""
         if not session:
             return "Document Metadata: None available", 0
 
@@ -195,9 +208,7 @@ class RAGService:
         meta_lines = ["Document Metadata:"]
         for d in docs:
             size_mb = d.file_size_bytes / (1024 * 1024)
-            day_str = d.created_at.strftime("%d %b")
-            time_str = d.created_at.strftime("%I:%M %p").lower()
-            date_formatted = f"{day_str}, {time_str}"
+            date_formatted = self._format_ist_datetime(d.created_at)
             pages_str = f"{d.page_count}" if d.page_count > 0 else "1"
             meta_lines.append(
                 f"- Name: {d.filename} | Pages: {pages_str} | Chunks: {d.chunk_count} | Size: {size_mb:.2f} MB | Uploaded At: {date_formatted}"
@@ -350,7 +361,7 @@ class RAGService:
             instructions = (
                 "STRICT METADATA FILTERING INSTRUCTIONS:\n"
                 "- If the user asks ONLY about upload time ('at what time was the pdf uploaded?', 'when was it uploaded?'): "
-                "Answer ONLY with the timestamp for that document in 'DD MMM, hh:mm am/pm' format (e.g., '31 Jul, 07:28 pm'). DO NOT append chunk counts or file sizes.\n"
+                "Answer ONLY with the timestamp for that document in 'DD MMM, hh:mm am/pm' IST format (e.g., '31 Jul, 07:28 pm'). DO NOT append chunk counts or file sizes.\n"
                 "- If the user asks for combined fields ('at what time was it uploaded and how many pages?'): "
                 "Answer directly with both requested values: \"The document 'aiml-task-2.pdf' has 5 pages and was uploaded on 31 Jul, 07:28 pm.\""
             )
@@ -431,9 +442,7 @@ class RAGService:
                         target_doc = d
                         break
 
-                day_str = target_doc.created_at.strftime("%d %b")
-                time_str = target_doc.created_at.strftime("%I:%M %p").lower()
-                date_formatted = f"{day_str}, {time_str}"
+                date_formatted = self._format_ist_datetime(target_doc.created_at)
                 pages_num = target_doc.page_count if target_doc.page_count > 0 else 1
                 chunks_num = target_doc.chunk_count
 

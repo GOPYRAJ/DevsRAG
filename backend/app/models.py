@@ -1,7 +1,13 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 from sqlmodel import SQLModel, Field, Relationship
+
+# Indian Standard Time (IST: UTC+5:30)
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def get_ist_now() -> datetime:
+    return datetime.now(IST)
 
 class DocumentStatus:
     PENDING = "pending"
@@ -22,8 +28,8 @@ class Document(SQLModel, table=True):
     status_message: Optional[str] = Field(default=None)
     page_count: int = Field(default=0)
     chunk_count: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=get_ist_now)
+    updated_at: datetime = Field(default_factory=get_ist_now)
 
     chunks: list["DocumentChunk"] = Relationship(back_populates="document", cascade_delete=True)
 
@@ -37,7 +43,7 @@ class DocumentChunk(SQLModel, table=True):
     token_count: int
     page_number: int = Field(default=1)
     vector_id: str = Field(index=True)
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=get_ist_now)
 
     document: Optional[Document] = Relationship(back_populates="chunks")
 
@@ -50,4 +56,4 @@ class QueryLog(SQLModel, table=True):
     retrieved_chunk_ids: str = Field(default="[]")  # JSON array string
     response_text: str
     execution_time_ms: int
-    created_at: datetime = Field(default_factory=datetime.now)
+    created_at: datetime = Field(default_factory=get_ist_now)
