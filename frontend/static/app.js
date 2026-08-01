@@ -3,6 +3,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Dynamic Production Backend Base URL for Vercel <-> Render Deployment
+    const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? ''
+        : 'https://devsrag-1.onrender.com';
+
     // State Management
     const state = {
         documents: [],
@@ -200,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // API Calls
     async function fetchDocuments(silent = false) {
         try {
-            const res = await fetch('/api/v1/documents');
+            const res = await fetch(`${API_BASE_URL}/api/v1/documents`);
             if (!res.ok) throw new Error('Failed to fetch documents');
             const data = await res.json();
             state.documents = data.documents || [];
@@ -220,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('file', file);
 
             try {
-                const res = await fetch('/api/v1/documents?overwrite=true', {
+                const res = await fetch(`${API_BASE_URL}/api/v1/documents?overwrite=true`, {
                     method: 'POST',
                     body: formData
                 });
@@ -248,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const docName = docToDelete ? docToDelete.filename : 'document';
 
         try {
-            const res = await fetch(`/api/v1/documents/${docId}`, { method: 'DELETE' });
+            const res = await fetch(`${API_BASE_URL}/api/v1/documents/${docId}`, { method: 'DELETE' });
             if (res.ok) {
                 if (state.selectedDocId === docId) {
                     state.selectedDocId = null;
@@ -406,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const loadingId = appendLoadingMessage();
 
         try {
-            const res = await fetch('/api/v1/query', {
+            const res = await fetch(`${API_BASE_URL}/api/v1/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

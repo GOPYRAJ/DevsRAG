@@ -28,11 +28,17 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS Middleware for Vercel / Render deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        "*",
+        "https://devs-rag.vercel.app",
+        "https://devs-rag-git-main-gopyraj1.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:8000"
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
